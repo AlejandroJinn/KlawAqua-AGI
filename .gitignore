@@ -35,3 +35,11 @@ __pycache__/
 
 # Docker
 docker-compose.override.yml
+# Embedded repos
+GLM-OCR-AMALIOMETRIA/
+OpenHands/
+Scrapling/
+graphrag-neo4j-ollama/
+liteparse/
+newrelic_agent*
+API_KEYS*

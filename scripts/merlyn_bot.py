@@ -98,40 +98,105 @@ Ollama: {'✅' if data.get('ollama') else '❌'}"""
         except Exception as e:
             return f"❌ Error avatar: {e}"
     
-    elif cmd.startswith("/chat "):
-        prompt = text[6:].strip()
-        send_message(chat_id, "💭 Pensando...")
+    elif cmd.startswith("/chat ") or cmd.startswith("/hermes "):
+        prompt = text[6:].strip() if cmd.startswith("/chat ") else text[8:].strip()
+        send_message(chat_id, "💭 Procesando con Hermes...")
+        import subprocess
         try:
-            data = json.dumps({"prompt": prompt, "conversation_id": str(chat_id)}).encode()
-            req = urllib.request.Request(f"{ROUTER_URL}/chat", data=data)
-            req.add_header("Content-Type", "application/json")
-            resp = urllib.request.urlopen(req, timeout=60)
-            result = json.loads(resp.read().decode())
-            response = result.get("response", "")[:500]
-            src = result.get("source", "?")
-            model = result.get("model", "?")
-            return f"{response}\n\n<sub>{src}/{model}</sub>"
+            result = subprocess.run(
+                ["hermes", "-z", prompt],
+                capture_output=True, text=True, timeout=90,
+                env={**os.environ, "HOME": os.environ.get("HOME", "/home/clarwis")}
+            )
+            response = result.stdout.strip()[:800] or result.stderr.strip()[:800]
+            if not response:
+                response = "Hermes no devolvió respuesta. ¿Ollama está activo?"
+            return response
+        except subprocess.TimeoutExpired:
+            return "⏰ Hermes tardó demasiado. Reintenta con un prompt más corto."
+        except FileNotFoundError:
+            return "❌ Hermes CLI no encontrado. Verifica instalación."
         except Exception as e:
-            return f"❌ Error: {e}"
+            return f"❌ Error Hermes: {e}"
+    
+    elif cmd.startswith("/research "):
+        query = text[10:].strip()
+        send_message(chat_id, "🔬 Investigando con Deep Research...")
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["python3", "-c", f"""
+import requests, json
+from bs4 import BeautifulSoup
+s = requests.Session()
+r = s.get('http://localhost:5000/auth/login')
+csrf = BeautifulSoup(r.text, 'html.parser').find('input', {{'name':'csrf_token'}})
+if csrf:
+    s.post('http://localhost:5000/auth/login', data={{'username':'klawaqua','password':'klawaqua2024','csrf_token':csrf.get('value')}})
+    api_csrf = s.get('http://localhost:5000/auth/csrf-token').json()['csrf_token']
+    resp = s.post('http://localhost:5000/api/start_research',
+        json={{'query':'{query}','model':'qwen3.5:4b','search_engines':['arxiv','duckduckgo']}},
+        headers={{'X-CSRF-Token':api_csrf}})
+    print(json.dumps(resp.json()))
+else:
+    print(json.dumps({{'error':'no csrf'}}))
+"""],
+                capture_output=True, text=True, timeout=120
+            )
+            data = json.loads(result.stdout.strip() or "{}")
+            if data.get("research_id"):
+                return f"🔬 <b>Investigación iniciada</b>\nID: {data['research_id']}\nEstado: {data.get('status','?')}\n\nVer resultados: http://localhost:5000/results/{data['research_id']}"
+            return f"❌ Error: {data.get('error', str(data)[:200])}"
+        except Exception as e:
+            return f"❌ Error LDR: {e}"
+    
+    elif cmd.startswith("/search "):
+        query = text[8:].strip()
+        send_message(chat_id, "🔍 Buscando...")
+        import urllib.request, urllib.parse
+        try:
+            url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1"
+            req = urllib.request.Request(url, headers={"User-Agent": "KlawAqua-AGI/2.0"})
+            resp = urllib.request.urlopen(req, timeout=10)
+            data = json.loads(resp.read().decode())
+            lines = [f"🔍 <b>{query}</b>"]
+            if data.get("Abstract"):
+                lines.append(f"\n{data['Abstract'][:300]}")
+                if data.get("AbstractURL"):
+                    lines.append(f"\n{data['AbstractURL'][:100]}")
+            for t in data.get("RelatedTopics", [])[:3]:
+                if isinstance(t, dict) and "Text" in t:
+                    lines.append(f"\n• {t['Text'][:200]}")
+            return "\n".join(lines)[:800]
+        except Exception as e:
+            return f"❌ Error búsqueda: {e}"
     
     elif cmd == "/dashboard":
         return "📊 Dashboard: http://localhost:8002/dashboard/"
-    
+
     elif cmd == "/ayuda" or cmd == "/help":
         return process_command(chat_id, "/start")
     
     else:
-        # Cualquier otro texto → LLM via Router
-        send_message(chat_id, "💭 Pensando...")
+        # Cualquier otro texto → Hermes Agent
+        send_message(chat_id, "💭 Procesando con Hermes...")
+        import subprocess
         try:
-            data = json.dumps({"prompt": text, "conversation_id": str(chat_id)}).encode()
-            req = urllib.request.Request(f"{ROUTER_URL}/chat", data=data)
-            req.add_header("Content-Type", "application/json")
-            resp = urllib.request.urlopen(req, timeout=60)
-            result = json.loads(resp.read().decode())
-            return result.get("response", "No pude procesar tu mensaje")[:500]
-        except:
-            return "❌ Error conectando con la IA local"
+            result = subprocess.run(
+                ["hermes", "-z", text],
+                capture_output=True, text=True, timeout=90,
+                env={**os.environ, "HOME": os.environ.get("HOME", "/home/clarwis")}
+            )
+            response = result.stdout.strip()[:800] or result.stderr.strip()[:800]
+            if not response:
+                return "Hermes no devolvió respuesta."
+            return response
+        except subprocess.TimeoutExpired:
+            return "⏰ Tiempo agotado. Reintenta."
+        except FileNotFoundError:
+            return "❌ Hermes CLI no encontrado."
+        except Exception as e:
+            return f"❌ Error: {e}"
 
 def get_offset():
     try:

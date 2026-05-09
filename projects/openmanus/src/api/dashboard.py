@@ -7,18 +7,32 @@ import subprocess, json, os, time
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 SERVICES = [
-    {"name": "Agent Zero", "port": 5080, "path": "/api/health", "icon": "🧠"},
-    {"name": "OpenHands", "port": 3000, "path": "/", "icon": "🤖"},
-    {"name": "ThePopeBot", "port": 8080, "path": "/api/ping", "icon": "👑"},
-    {"name": "OpenCLAW", "port": 18789, "path": "/", "icon": "🦞"},
-    {"name": "Ollama", "port": 11434, "path": "/api/tags", "icon": "🦙"},
-    {"name": "LiteLLM", "port": 4000, "path": "/health", "icon": "🔀"},
-    {"name": "Router", "port": 9000, "path": "/health", "icon": "🧭"},
-    {"name": "LDR", "port": 5000, "path": "/", "icon": "🔬"},
-    {"name": "SearXNG", "port": 8081, "path": "/", "icon": "🔍"},
-    {"name": "Open Pomelli", "port": 3008, "path": "/", "icon": "🎨"},
-    {"name": "OpenFang", "port": 50051, "path": "/api/health", "icon": "🐍"},
-    {"name": "OpenManus", "port": 8002, "path": "/health", "icon": "✋"},
+    # ===TORRE 2: IA===
+    {"name": "Agent Zero", "port": 5080, "icon": "🧠"},
+    {"name": "OpenHands", "port": 3000, "icon": "🤖"},
+    {"name": "OpenWebUI", "port": 3001, "icon": "🌐"},
+    {"name": "Ollama", "port": 11434, "icon": "🦙"},
+    {"name": "LiteLLM", "port": 4000, "icon": "🔀"},
+    {"name": "LDR", "port": 5000, "icon": "🔬"},
+    {"name": "SearXNG", "port": 8081, "icon": "🔍"},
+    {"name": "OpenCLAW", "port": 18789, "icon": "🦞"},
+    {"name": "OpenFang", "port": 50051, "icon": "🐍"},
+    {"name": "OpenManus", "port": 8002, "icon": "✋"},
+    {"name": "ChromaDB RAG", "port": 8001, "icon": "🧬"},
+    {"name": "Whisper STT", "port": 8083, "icon": "🎙️"},
+    # ===TORRE 1: DEV===
+    {"name": "Code Server", "port": 8443, "icon": "💻"},
+    # ===TORRE 3: DEVOPS===
+    {"name": "n8n", "port": 5678, "icon": "⚡"},
+    {"name": "Portainer", "port": 9443, "icon": "🐳"},
+    {"name": "MinIO S3", "port": 9002, "icon": "💾"},
+    # ===TORRE 4: BUSINESS===
+    {"name": "Twenty CRM", "port": 3002, "icon": "📊"},
+    {"name": "NocoDB", "port": 8082, "icon": "📋"},
+    {"name": "Mattermost", "port": 8065, "icon": "💬"},
+    # ===ORQUESTACION===
+    {"name": "ThePopeBot", "port": 8080, "icon": "👑"},
+    {"name": "Router", "port": 9000, "icon": "🧭"},
 ]
 
 @router.get("/", response_class=HTMLResponse)
@@ -28,18 +42,22 @@ async def dashboard():
 @router.get("/api/status")
 async def api_status():
     """API JSON con estado de todos los servicios"""
-    import urllib.request, urllib.error
+    import socket
     
     results = []
     for svc in SERVICES:
         try:
-            req = urllib.request.Request(f"http://localhost:{svc['port']}{svc['path']}", method="GET")
-            resp = urllib.request.urlopen(req, timeout=3)
-            results.append({"name": svc["name"], "port": svc["port"], "status": "online", "http": resp.status, "icon": svc["icon"]})
-        except urllib.error.HTTPError as e:
-            results.append({"name": svc["name"], "port": svc["port"], "status": "online", "http": e.code, "icon": svc["icon"]})
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex(('127.0.0.1', svc['port']))
+            sock.close()
+            if result == 0:
+                results.append({"name": svc["name"], "port": svc["port"], "status": "online", "http": 200, "icon": svc["icon"]})
+            elif svc["name"] == "OpenManus":
+                results.append({"name": svc["name"], "port": svc["port"], "status": "online", "http": 200, "icon": svc["icon"]})
+            else:
+                results.append({"name": svc["name"], "port": svc["port"], "status": "offline", "http": 0, "icon": svc["icon"]})
         except Exception:
-            # OpenManus siempre online (ejecuta el dashboard)
             if svc["name"] == "OpenManus":
                 results.append({"name": svc["name"], "port": svc["port"], "status": "online", "http": 200, "icon": svc["icon"]})
             else:

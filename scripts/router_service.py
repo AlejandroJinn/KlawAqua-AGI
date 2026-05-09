@@ -40,6 +40,7 @@ SERVICE_REGISTRY = {
     "open-pomelli":   "http://localhost:3008",
     "openfang":       "http://localhost:50051",
     "openmanus":      "http://localhost:8002",
+    "openswarm":      "http://localhost:8324",
 }
 
 import urllib.request, urllib.error
