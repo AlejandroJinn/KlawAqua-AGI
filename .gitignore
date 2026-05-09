@@ -43,3 +43,5 @@ graphrag-neo4j-ollama/
 liteparse/
 newrelic_agent*
 API_KEYS*
+scripts/auto_router.py
+scripts/klawaqua-boot.sh
