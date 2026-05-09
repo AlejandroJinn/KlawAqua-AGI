@@ -1,0 +1,37 @@
+# KlawAqua-AGI .gitignore
+
+# Datos y backups
+backups/
+data/
+logs/
+*.db
+*.db-journal
+
+# Submódulos
+projects/*/.git/
+projects/*/node_modules/
+projects/*/venv/
+projects/*/.venv/
+projects/*/__pycache__/
+
+# Archivos grandes
+*.safetensors
+*.gguf
+*.bin
+models/
+
+# Hermes Agent (contiene test fixtures con API keys)
+projects/hermes-agent/
+projects/NousResearch/
+
+# Envs
+.env
+.klawaqua.env
+
+# Sistema
+__pycache__/
+*.pyc
+.DS_Store
+
+# Docker
+docker-compose.override.yml
